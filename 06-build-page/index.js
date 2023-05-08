@@ -91,77 +91,43 @@ fs.readdir(path.join(__dirname, "styles"), (err, files) => {
     });
   }
 });
-// stream.on("readable", function () {
-//   let data = stream.read();
-//   if (data !== null) {
-//     let data1 = data.toString();
-//     let arr = data1.split("");
-//     b = "";
-//     let comp = {};
-//     for (let i = 0; i < arr.length; i++) {
-//       if (arr[i] === "{") {
-//         i++;
-//         i++;
-//         let a = "";
-//         while (arr[i] !== "}") {
-//           a += arr[i];
-//           i++;
-//         }
-//         comp[b.length] = a;
 
-//         i++;
-//       } else if (arr[i] !== "{") {
-//         b += arr[i];
-//       }
-//     }
+async function replaceTags(content) {
+  const tagRegex = /\{\{(\w+)\}\}/g;
+  let replacedContent = content;
 
-//     for (v in comp) {
-//       fs.readFile(
-//         path.join(__dirname, `components\\${comp[v]}.html`),
-//         "utf8",
-//         function (error, data) {
-//           if (error) throw error;
-//           console.log(data);
-//           comp[v] = data;
-//         }
-//       );
-//     }
-//     fs.appendFile(
-//       path.join(__dirname, `project-dist\\index.html`),
-//       b,
-//       (err) => {
-//         if (err) throw err;
-//       }
-//     );
-//   }
-// });
+  for await (const match of content.matchAll(tagRegex)) {
+    const tagName = match[1];
+    const componentPath = path.join(
+      path.join(__dirname, "components"),
+      `${tagName}.html`
+    );
 
-const componentsDir = path.join(__dirname, "components");
-const templatePath = path.join(__dirname, "template.html");
-const outputPath = path.join(__dirname, "project-dist", "index.html");
-
-fs.readFile(templatePath, "utf8", (err, templateContent) => {
-  if (err) {
-    console.error("Ошибка чтения шаблона:", err);
-    return;
+    try {
+      const componentContent = await fs.promises.readFile(
+        componentPath,
+        "utf8"
+      );
+      replacedContent = replacedContent.replace(match[0], componentContent);
+    } catch (err) {}
   }
 
-  const replaceTags = (content) => {
-    const tagRegex = /\{\{(\w+)\}\}/g;
-    return content.replace(tagRegex, (match, tagName) => {
-      const componentPath = path.join(componentsDir, `${tagName}.html`);
-      if (!fs.existsSync(componentPath)) {
-        console.error(`Компонент "${tagName}" не найден.`);
-        return match;
-      }
-      const componentContent = fs.readFileSync(componentPath, "utf8");
-      return componentContent;
-    });
-  };
+  return replacedContent;
+}
 
-  fs.writeFile(outputPath, replaceTags(templateContent), "utf8", (err) => {
-    if (err) {
-      return;
-    }
-  });
-});
+async function main() {
+  try {
+    const templateContent = await fs.promises.readFile(
+      path.join(__dirname, "template.html"),
+      "utf8"
+    );
+    const replacedContent = await replaceTags(templateContent);
+    await fs.promises.writeFile(
+      path.join(__dirname, "project-dist", "index.html"),
+      replacedContent,
+      "utf8"
+    );
+  } catch (err) {}
+}
+
+main();
