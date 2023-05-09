@@ -5,6 +5,72 @@ let stream = new fs.ReadStream(path.join(__dirname, "template.html"));
 
 fs.stat(path.join(__dirname, `project-dist`), function (err) {
   if (!err) {
+    fs.rm(path.join(__dirname, `project-dist`), { recursive: true }, (err) => {
+      fsPromises.mkdir(path.join(__dirname, `project-dist`), true);
+      fs.writeFile(
+        path.join(__dirname, "project-dist\\index.html"),
+        "",
+        (err) => {
+          if (err) throw err;
+        }
+      );
+      fs.writeFile(
+        path.join(__dirname, "project-dist\\style.css"),
+        "",
+        (err) => {
+          if (err) throw err;
+        }
+      );
+
+      fs.stat(path.join(__dirname, `project-dist\\assets`), function (err) {
+        if (!err) {
+        } else if (err.code === "ENOENT") {
+          fsPromises.mkdir(path.join(__dirname, `project-dist\\assets`), true);
+          fs.readdir(path.join(__dirname, "assets"), (err, files) => {
+            if (err) console.log(err);
+            else {
+              files.forEach((file) => {
+                fs.stat(
+                  path.join(__dirname, `project-dist\\assets\\${file}`),
+                  function (err) {
+                    if (!err) {
+                    } else if (err.code === "ENOENT") {
+                      fsPromises.mkdir(
+                        path.join(__dirname, `project-dist\\assets\\${file}`),
+                        true
+                      );
+                    }
+                  }
+                );
+                fs.readdir(
+                  path.join(__dirname, `assets\\${file}`),
+
+                  (err, filesT) => {
+                    if (err) console.log(err);
+                    else {
+                      filesT.forEach((fileT) => {
+                        fs.copyFile(
+                          path.join(__dirname, `assets\\${file}\\${fileT}`),
+                          path.join(
+                            __dirname,
+                            `project-dist\\assets\\${file}\\${fileT}`
+                          ),
+                          (err) => {
+                            if (err) {
+                              console.log("Error Found:", err);
+                            }
+                          }
+                        );
+                      });
+                    }
+                  }
+                );
+              });
+            }
+          });
+        }
+      });
+    });
   } else if (err.code === "ENOENT") {
     fsPromises.mkdir(path.join(__dirname, `project-dist`), true);
     fs.writeFile(
@@ -17,6 +83,7 @@ fs.stat(path.join(__dirname, `project-dist`), function (err) {
     fs.writeFile(path.join(__dirname, "project-dist\\style.css"), "", (err) => {
       if (err) throw err;
     });
+
     fs.stat(path.join(__dirname, `project-dist\\assets`), function (err) {
       if (!err) {
       } else if (err.code === "ENOENT") {
